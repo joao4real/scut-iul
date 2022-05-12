@@ -1,0 +1,17 @@
+#!/bin/bash
+
+###############################################################################
+## ISCTE-IUL: Trabalho prático de Sistemas Operativos 2021/2022
+##
+## Este módulo destina-se a realizar operações de I/O utilitárias.
+## Não deverá ser alterado nem submetido com o trabalho
+##
+## Nome do Módulo: debug
+## Descrição/Explicação do Módulo: Mensagens de debug para os scripts
+## Basicamente o módulo escreve "DEBUG: " e depois todos os argumentos que sejam passados
+## Dica: Quando afetarem variáveis, façam e.g., "var1=3 && debug var1 $var1" para verem logo o valor das variáveis.
+##       No final, para desaparecerem as mensagens de DEBUG, basta comentar a última linha deste script, 
+##       e não é preciso mexer nos vossos scripts. Deste modo, podem ativar e desativar o Debug quando quiserem.
+###############################################################################
+
+echo "DEBUG: $@" && exit    ## Comentar esta linha para desaparecerem as mensagens de DEBUG

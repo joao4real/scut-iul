@@ -1,0 +1,26 @@
+#!/bin/bash
+
+###############################################################################
+## ISCTE-IUL: Trabalho prático de Sistemas Operativos 2021/2022
+##
+## Este módulo destina-se a realizar operações de I/O utilitárias.
+## Não deverá ser alterado nem submetido com o trabalho
+##
+## Nome do Módulo: success
+## Descrição/Explicação do Módulo: Mensagens de erro para os scripts
+## @param $1: Valores possíveis e exemplos:
+##      1: Terminou o script com sucesso. Ex: success 1
+##      2: Mostra Lista de Condutores <ficheiro> ($2: Nome do ficheiro de condutores). Ex: success 2 "ficheiro.txt" OU cat "ficheiro.txt" | success 2
+##      3: Mostra mensagem de sucesso na atualização de taxa de utilização de um Lanço ($2: Nome do Lanço). Ex: success 3 "Cartaxo-Santarém"
+##      4: Mostra Lista de Portagens <ficheiro> ($2: Nome do ficheiro de portagens). Ex: success 4 "ficheiro.txt" OU cat "ficheiro.txt" | success 4
+##      5: Mostra Lista de Faturas <ficheiro> ($2: Nome do ficheiro de faturas). Ex: success 5 "ficheiro.txt" OU cat "ficheiro.txt" | success 5
+##      6: Mostra Lista de Nomes (de Autoestradas, de Lanços, ou de Condutores) <ficheiro> ($2: Nome do ficheiro de Nomes). Ex: success 6 "ficheiro.txt" OU cat "ficheiro.txt" | success 6
+###############################################################################
+
+((!$#)) && exit
+[[ 1 == $1 ]] && echo "SUCESSO: Terminou o script" && exit
+[[ 2 == $1 ]] && echo "SUCESSO: Lista de Condutores:" && cat $2 && exit
+[[ 3 == $1 ]] && echo "SUCESSO: Atualização da taxa de utilização do Lanço \"$2\"" && exit
+[[ 4 == $1 ]] && echo "SUCESSO: Lista de Portagens:" && cat $2 && exit
+[[ 5 == $1 ]] && echo "SUCESSO: Lista de Faturas:" && cat $2 && exit
+[[ 6 == $1 ]] && echo "SUCESSO: Lista de Nomes:" && cat $2 && exit

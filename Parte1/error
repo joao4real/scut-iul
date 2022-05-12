@@ -1,0 +1,20 @@
+#!/bin/bash
+
+###############################################################################
+## ISCTE-IUL: Trabalho prático de Sistemas Operativos 2021/2022
+##
+## Este módulo destina-se a realizar operações de I/O utilitárias.
+## Não deverá ser alterado nem submetido com o trabalho
+##
+## Nome do Módulo: error
+## Descrição/Explicação do Módulo: Mensagens de erro para os scripts
+## @param $1:
+##      1: O ficheiro não existe ($2: Nome do ficheiro). Ex: error 1 "ficheiro.txt"
+##      2: Não foram passados argumentos suficientes. Ex: error 2
+##      3: O formato do argumento não é o esperado ($2: Nome do argumento). Ex: error 3 "argumento"
+###############################################################################
+
+((!$#)) && exit
+[[ 1 == $1 ]] && echo "ERRO: O ficheiro \"$2\" não existe" && exit
+[[ 2 == $1 ]] && echo "ERRO: Não foram passados argumentos suficientes!" && exit
+[[ 3 == $1 ]] && echo "ERRO: O formato do argumento \"$2\" não é o esperado" && exit
