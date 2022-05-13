@@ -72,9 +72,9 @@ int main() {    // Os alunos em princípio não deverão alterar esta função
 int getMsg() {
     debug("C1 <");
     int msgId = -1;
-        msgId = msgget(IPC_KEY, 0666 | IPC_CREAT );
+        msgId = msgget(IPC_KEY, 0666);
             if (msgId == -1){
-                error("C1","O cliente com msgID %d não se conseguiu conectar ao servidor");
+                error("C1","O cliente com msgID %d não se conseguiu conectar ao servidor", msgId);
                 exit(-1);
             }else{
                 success("C1","%d", msgId);
@@ -121,7 +121,7 @@ Passagem getDadosPedidoUtilizador() {
         p.tipo_passagem = -1;
     }
     }
-    debug("C2", ">");
+    debug("C2 >");
     return p;
 }
 
@@ -137,7 +137,17 @@ Passagem getDadosPedidoUtilizador() {
  */
 int enviaPedido( Passagem pedido, int msgId ) {
     debug("C3 <");
-
+        int status;
+        mensagem.tipoMensagem = 1;
+        mensagem.conteudo.action = 1;
+        mensagem.conteudo.dados.pedido_cliente = pedido  ;
+        status = msgsnd(msgId, &mensagem, sizeof(pedido), 0);
+           if ( status == -1 ){ 
+               error("C3","Erro na escrita da mensagem");
+               exit(-1);
+           }else{
+               success("C3","Enviei mensagem");
+           }
     debug("C3 >");
     return 0;
 }
@@ -153,8 +163,34 @@ int enviaPedido( Passagem pedido, int msgId ) {
 Mensagem recebeMensagem( int msgId ) {
     debug("C4 <");
     Mensagem mensagem;
-    pause();    // Código temporário para o Cliente não ficar em espera ativa, os alunos deverão remover esta linha quando a leitura à message queue estiver feita.
-
+    int pid = getpid();
+    int status;
+        /*if(mensagem.conteudo.action == 1){
+            status = msgrcv(msgId, &mensagem, sizeof(mensagem.conteudo.dados.pedido_cliente), pid, 0);
+                if( status == -1){
+                    error("C4","Falha ao carregar o pedido");
+                    exit(-1);
+             }else{
+                    success("C4","Pedido Carregado");
+                 }
+        }
+        if(mensagem.conteudo.action == 3){
+            status = msgrcv(msgId, &mensagem, sizeof(mensagem.conteudo.dados.contadores_servidor), pid, 0);
+                if( status == -1){
+                    error("C4","Falha ao carregar os contadores");
+                    exit(-1);
+             }else{
+                    success("C4","Contadores Carregados");
+                }
+        }*/
+    status = msgrcv(msgId, &mensagem, sizeof(mensagem), pid, 0);
+        if(status == -1){
+            error("C4","Erro ao receber a mensagem");
+            exit(-1);
+        }else{
+            success("C4","Mensagem Carregada");
+        }
+    //pause();    // Código temporário para o Cliente não ficar em espera ativa, os alunos deverão remover esta linha quando a leitura à message queue estiver feita.
     debug("C4 >");
     return mensagem;
 }
@@ -167,7 +203,8 @@ Mensagem recebeMensagem( int msgId ) {
  */
 void pedidoAck() {
     debug("C5 <");
-
+    success("C5","Passagem Iniciada");
+    passagemIniciada = TRUE;   
     debug("C5 >");
 }
 
@@ -184,7 +221,13 @@ void pedidoAck() {
  */
 void pedidoConcluido( Mensagem mensagem ) {
     debug("C6 <");
-
+        if(passagemIniciada == TRUE){
+            success("C6","Passagem Concluída com estatísticas: %d %d %d",mensagem.conteudo.dados.contadores_servidor.contadorNormal,mensagem.conteudo.dados.contadores_servidor.contadorViaVerde,mensagem.conteudo.dados.contadores_servidor.contadorAnomalias);
+            exit(0);
+        }else{
+            error("C6","O cliente com PID %d ainda não foi iniciada",mensagem.conteudo.dados.pedido_cliente.pid_cliente);
+            exit(-1);
+        }
     debug("C6 >");
 }
 
@@ -195,6 +238,7 @@ void pedidoConcluido( Mensagem mensagem ) {
  */
 void pedidoCancelado() {
     debug("C7 <");
-
+    success("C7","Processo Não Concluído e Incompleto");
+    exit(0);
     debug("C7 >");
 }
