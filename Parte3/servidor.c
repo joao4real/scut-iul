@@ -1,7 +1,7 @@
 /******************************************************************************
  ** ISCTE-IUL: Trabalho prático 2 de Sistemas Operativos
  **
- ** Aluno: Nº:       Nome: 
+ ** Aluno: Nº: 104669       Nome: João Luís Pereira Macedo
  ** Nome do Módulo: servidor.c v1
  ** Descrição/Explicação do Módulo: 
  **

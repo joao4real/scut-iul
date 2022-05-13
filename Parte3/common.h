@@ -24,7 +24,7 @@
 /**
  *  KEY to be used on all Linux IPC get operations
  */
-#define IPC_KEY 0x0a123456      // Suggestion: Replace with your student number
+#define IPC_KEY 0x0a104669     // Suggestion: Replace with your student number
 
 #define MIN_PROCESSAMENTO   1   // Tempo mínimo de processamento do Servidor
 #define MAX_PROCESSAMENTO   7   // Tempo máximo de processamento do Servidor

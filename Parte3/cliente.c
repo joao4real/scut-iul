@@ -1,7 +1,7 @@
 /******************************************************************************
  ** ISCTE-IUL: Trabalho prático 2 de Sistemas Operativos
  **
- ** Aluno: Nº:       Nome: 
+ ** Aluno: Nº: 104669      Nome: João Luís Pereira Macedo
  ** Nome do Módulo: cliente.c v1
  ** Descrição/Explicação do Módulo: 
  **
@@ -72,7 +72,13 @@ int main() {    // Os alunos em princípio não deverão alterar esta função
 int getMsg() {
     debug("C1 <");
     int msgId = -1;
-
+        msgId = msgget(IPC_KEY, 0666 | IPC_CREAT );
+            if (msgId == -1){
+                error("C1","O cliente com msgID %d não se conseguiu conectar ao servidor");
+                exit(-1);
+            }else{
+                success("C1","%d", msgId);
+            }
     debug("C1 >");
     return msgId;
 }
@@ -89,8 +95,33 @@ Passagem getDadosPedidoUtilizador() {
     debug("C2 <");
     Passagem p;
     p.tipo_passagem = -1;   // Por omissão, retorna valor inválido
-
-    debug("C2 >");
+    int pid = getpid();
+    char passagem[5];
+    p.matricula[9];         
+    p.lanco[50];
+    p.pid_cliente = pid;
+    printf("Escolha o tipo de passagem: ");
+    my_fgets(passagem , 5 ,stdin);
+    p.tipo_passagem = atoi(passagem);
+    if (  p.tipo_passagem != 1 &&  p.tipo_passagem != 2){
+        error("C2","Tipo de passagem inválido");
+        return p;
+    }else{
+    printf("Inserir matrícula: ");      
+    my_fgets(p.matricula, 9, stdin);
+    printf("Inserir Lanço: ");
+    my_fgets(p.lanco, 50, stdin);
+    if(p.tipo_passagem == 1){
+        success("C2", "Passagem do tipo Normal solicitado pela viatura com matrícula %s para o Lanço %s e com PID %d",p.matricula, p.lanco, p.pid_cliente);
+    }
+    else if(p.tipo_passagem == 2){
+        success("C2", "Passagem do tipo Via Verde solicitado pela viatura com matrícula %s para o Lanço %s e com PID %d",p.matricula, p.lanco, p.pid_cliente);
+    }else{
+        error("C2","Validação de passagem incorreta");
+        p.tipo_passagem = -1;
+    }
+    }
+    debug("C2", ">");
     return p;
 }
 
