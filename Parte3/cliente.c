@@ -190,7 +190,7 @@ Mensagem recebeMensagem( int msgId ) {
         }else{
             success("C4","Li mensagem do Servidor");
         }
-    //pause();    // Código temporário para o Cliente não ficar em espera ativa, os alunos deverão remover esta linha quando a leitura à message queue estiver feita.
+    //pause();    // Código temporário para o Cliente não ficar em espera ativa, os alunos deverão remover esta linha quando a leitura à message queue estiver feita
     debug("C4 >");
     return mensagem;
 }
