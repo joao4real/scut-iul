@@ -188,7 +188,7 @@ Mensagem recebeMensagem( int msgId ) {
             error("C4","Erro ao receber a mensagem");
             exit(-1);
         }else{
-            success("C4","Mensagem Carregada");
+            success("C4","Li mensagem do Servidor");
         }
     //pause();    // Código temporário para o Cliente não ficar em espera ativa, os alunos deverão remover esta linha quando a leitura à message queue estiver feita.
     debug("C4 >");
@@ -239,6 +239,6 @@ void pedidoConcluido( Mensagem mensagem ) {
 void pedidoCancelado() {
     debug("C7 <");
     success("C7","Processo Não Concluído e Incompleto");
-    exit(0);
+    exit(-1);
     debug("C7 >");
 }
