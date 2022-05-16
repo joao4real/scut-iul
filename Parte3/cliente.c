@@ -74,7 +74,7 @@ int getMsg() {
     int msgId = -1;
         msgId = msgget(IPC_KEY, 0666);
             if (msgId == -1){
-                error("C1","O cliente com msgID %d não se conseguiu conectar ao servidor", msgId);
+                error("C1","O cliente não se conseguiu conectar ao servidor");
                 exit(-1);
             }else{
                 success("C1","%d", msgId);
@@ -97,16 +97,10 @@ Passagem getDadosPedidoUtilizador() {
     p.tipo_passagem = -1;   // Por omissão, retorna valor inválido
     int pid = getpid();
     char passagem[5];
-    p.matricula[9];         
-    p.lanco[50];
     p.pid_cliente = pid;
     printf("Escolha o tipo de passagem: ");
     my_fgets(passagem , 5 ,stdin);
     p.tipo_passagem = atoi(passagem);
-    if (  p.tipo_passagem != 1 &&  p.tipo_passagem != 2){
-        error("C2","Tipo de passagem inválido");
-        return p;
-    }else{
     printf("Inserir matrícula: ");      
     my_fgets(p.matricula, 9, stdin);
     printf("Inserir Lanço: ");
@@ -114,9 +108,8 @@ Passagem getDadosPedidoUtilizador() {
     if(p.tipo_passagem == 1){
         success("C2", "Passagem do tipo Normal solicitado pela viatura com matrícula %s para o Lanço %s e com PID %d",p.matricula, p.lanco, p.pid_cliente);
     }
-    else if(p.tipo_passagem == 2){
+    if(p.tipo_passagem == 2){
         success("C2", "Passagem do tipo Via Verde solicitado pela viatura com matrícula %s para o Lanço %s e com PID %d",p.matricula, p.lanco, p.pid_cliente);
-    }
     }
     debug("C2 >");
     return p;
@@ -137,9 +130,9 @@ int enviaPedido( Passagem pedido, int msgId ) {
         int status;
         mensagem.tipoMensagem = 1;
         mensagem.conteudo.action = 1;
-        mensagem.conteudo.dados.pedido_cliente = pedido  ;
-        status = msgsnd(msgId, &mensagem, sizeof(pedido), 0);
-           if ( status == -1 ){ 
+        mensagem.conteudo.dados.pedido_cliente = pedido;
+        status = msgsnd(msgId, &mensagem, sizeof(mensagem.conteudo), 0);
+           if ( status <0 ){ 
                error("C3","Erro na escrita da mensagem");
                exit(-1);
            }else{
@@ -162,26 +155,8 @@ Mensagem recebeMensagem( int msgId ) {
     Mensagem mensagem;
     int pid = getpid();
     int status;
-        /*if(mensagem.conteudo.action == 1){
-            status = msgrcv(msgId, &mensagem, sizeof(mensagem.conteudo.dados.pedido_cliente), pid, 0);
-                if( status == -1){
-                    error("C4","Falha ao carregar o pedido");
-                    exit(-1);
-             }else{
-                    success("C4","Pedido Carregado");
-                 }
-        }
-        if(mensagem.conteudo.action == 3){
-            status = msgrcv(msgId, &mensagem, sizeof(mensagem.conteudo.dados.contadores_servidor), pid, 0);
-                if( status == -1){
-                    error("C4","Falha ao carregar os contadores");
-                    exit(-1);
-             }else{
-                    success("C4","Contadores Carregados");
-                }
-        }*/
-    status = msgrcv(msgId, &mensagem, sizeof(mensagem.conteudo), pid, 0);
-        if(status < 0 ){
+    status = msgrcv(msgId, &mensagem, sizeof(mensagem), pid ,0);
+        if( status < 0 ){
             error("C4","Erro ao receber a mensagem");
             exit(-1);
         }else{
