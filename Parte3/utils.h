@@ -16,7 +16,7 @@
 /**
  *  Impressão de mensagens de DEBUG incluindo o módulo e a linha de código. Para ativar, alterar DEBUG_MODE para 1
  */
-#define DEBUG_MODE TRUE   // Se estiver a TRUE, apresentará mensagens de DEBUG, caso contrário, não apresenta
+#define DEBUG_MODE FALSE  // Se estiver a TRUE, apresentará mensagens de DEBUG, caso contrário, não apresenta
 
 /**
  *  Escreve uma mensagem de debug (parâmetros iguais ao printf) se DEBUG_MODE estiver a TRUE

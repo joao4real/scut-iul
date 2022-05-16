@@ -116,9 +116,6 @@ Passagem getDadosPedidoUtilizador() {
     }
     else if(p.tipo_passagem == 2){
         success("C2", "Passagem do tipo Via Verde solicitado pela viatura com matrícula %s para o Lanço %s e com PID %d",p.matricula, p.lanco, p.pid_cliente);
-    }else{
-        error("C2","Validação de passagem incorreta");
-        p.tipo_passagem = -1;
     }
     }
     debug("C2 >");
@@ -183,14 +180,13 @@ Mensagem recebeMensagem( int msgId ) {
                     success("C4","Contadores Carregados");
                 }
         }*/
-    status = msgrcv(msgId, &mensagem, sizeof(mensagem), pid, 0);
-        if(status == -1){
+    status = msgrcv(msgId, &mensagem, sizeof(mensagem.conteudo), pid, 0);
+        if(status < 0 ){
             error("C4","Erro ao receber a mensagem");
             exit(-1);
         }else{
             success("C4","Li mensagem do Servidor");
         }
-    //pause();    // Código temporário para o Cliente não ficar em espera ativa, os alunos deverão remover esta linha quando a leitura à message queue estiver feita
     debug("C4 >");
     return mensagem;
 }
