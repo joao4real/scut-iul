@@ -99,12 +99,22 @@ Passagem getDadosPedidoUtilizador() {
     char passagem[5];
     p.pid_cliente = pid;
     printf("Escolha o tipo de passagem: ");
-    my_fgets(passagem , 5 ,stdin);
-    p.tipo_passagem = atoi(passagem);
+    if( my_fgets(passagem , 5 ,stdin) == NULL){
+            error("C2","Campo Vazio");
+            exit(-1);
+    }else{
+        p.tipo_passagem = atoi(passagem);
+    }
     printf("Inserir matrícula: ");      
-    my_fgets(p.matricula, 9, stdin);
+    if(my_fgets(p.matricula, 9, stdin) == NULL){
+            error("C2","Campo Vazio");
+            exit(-1);
+        }
     printf("Inserir Lanço: ");
-    my_fgets(p.lanco, 50, stdin);
+    if(my_fgets(p.lanco, 50, stdin) == NULL){
+        error("C2","Campo Vazio");
+        exit(-1);
+    }
     if(p.tipo_passagem == 1){
         success("C2", "Passagem do tipo Normal solicitado pela viatura com matrícula %s para o Lanço %s e com PID %d",p.matricula, p.lanco, p.pid_cliente);
     }

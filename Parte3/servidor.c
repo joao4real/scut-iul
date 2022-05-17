@@ -267,9 +267,7 @@ int criaServidorDedicado() {
                 error("S5","Fork");
                 return -1;
                 }
-    if( pidFilho == 0){
-        return 0;
- }else{
+    if( pidFilho != 0){
         success("S5","Criado Servidor Dedicado com PID %d",pidFilho);
     }
     debug("S5 >");
@@ -290,41 +288,42 @@ void trataSinalSIGINT( int sinalRecebido ) {
     debug("S6 <");
         int status;
         success("S6","Shutdown Servidor");
-        //semNrDown(SEM_LISTAPASSAGENS);
+        semNrDown(SEM_LISTAPASSAGENS);
         for (int i = 0; i < NUM_PASSAGENS; i++){
             if(dadosServidor->lista_passagens[i].tipo_passagem != -1){
                 kill( dadosServidor->lista_passagens[i].pid_servidor_dedicado,SIGHUP );
             }
         }
-        //semNrUp(SEM_LISTAPASSAGENS);
+        semNrUp(SEM_LISTAPASSAGENS);
         success("S6.1","Shutdown Servidores Dedicados");
         FILE* est;
         est = fopen(FILE_STATS, "wb");
             if(est == NULL ){
                 error("S6.2","Não foi possível abrir o ficheiro");
          }else{
-              //semNrDown(SEM_ESTATISTICAS);
+              semNrDown(SEM_ESTATISTICAS);
                 if (fwrite(&dadosServidor->contadores, sizeof(dadosServidor->contadores), 1, est) < 1){
-                    error("S6.2","Não foi possível  ler o ficheiro");
-             }else{
+                    error("S6.2","Não foi possível escrever no ficheiro");
+                }else{
+                    semNrUp(SEM_ESTATISTICAS);
                     success("S6.2","Estatísticas Guardadas");
                     fclose(est);
                 }
-            //semNrUp(SEM_ESTATISTICAS);
+            
          }
         success("S6.3","Shutdown Servidor completo");
-    status = msgctl(msgId ,IPC_RMID, NULL);
+        status = msgctl(msgId ,IPC_RMID, NULL);
         if(status < 0){
             error("S6.3","Erro ao apagar a message queue");
             exit(-1);
         }
-    int semId = semRemove();
+    semId = semRemove();
         if(semId < 0){
             error("S6.3","Erro ao apagar os semáforos criados");
-            exit(-1);
         }
     exit(0);
     debug("S6 >");
+    return;
 }
 
 /**
@@ -374,36 +373,7 @@ int sd_validaPedido( Mensagem pedido ) {
             error("SD8","O tipo de passagem %d é inválido",pedido.conteudo.dados.pedido_cliente.tipo_passagem);
             semNrDown(SEM_ESTATISTICAS);
             dadosServidor->contadores.contadorAnomalias++;
-                if(pidUpper == 1){
-                    pedido.conteudo.action = 4;
-                    pedido.tipoMensagem = pedido.conteudo.dados.pedido_cliente.pid_cliente;
-                    status = msgsnd(msgId, &pedido, sizeof(pedido.conteudo), 0);
-                        if (status < 0){
-                            error("SD8","Erro ao enviar a mensagem");
-                        }
-                }
-            semNrUp(SEM_ESTATISTICAS); 
-            exit(-1);
-        }
-        else if (pedido.conteudo.dados.pedido_cliente.matricula == NULL || strcmp(pedido.conteudo.dados.pedido_cliente.matricula ,"") == 0){
-            error("SD8","Matrícula Inválida");
-            semNrDown(SEM_ESTATISTICAS);
-            dadosServidor->contadores.contadorAnomalias++;
-            if(pidUpper == 1){
-                pedido.conteudo.action = 4;
-                pedido.tipoMensagem = pedido.conteudo.dados.pedido_cliente.pid_cliente;
-                status = msgsnd(msgId, &pedido, sizeof(pedido.conteudo), 0);
-                    if (status < 0){
-                        error("SD8","Erro ao enviar a mensagem");
-                    }
-            }
-            semNrUp(SEM_ESTATISTICAS); 
-            exit(-1);
-        }
-        else if ( pedido.conteudo.dados.pedido_cliente.lanco == NULL || strcmp(pedido.conteudo.dados.pedido_cliente.lanco ,"") == 0 ){
-            error("SD8","Lanço Inválido");
-            semNrDown(SEM_ESTATISTICAS);
-            dadosServidor->contadores.contadorAnomalias++;
+            semNrUp(SEM_ESTATISTICAS);
                 if(pidUpper == 1){
                     pedido.conteudo.action = 4;
                     pedido.tipoMensagem = pedido.conteudo.dados.pedido_cliente.pid_cliente;
@@ -412,7 +382,36 @@ int sd_validaPedido( Mensagem pedido ) {
                             error("SD8","Erro ao enviar a mensagem");
                         }
                 } 
-            semNrUp(SEM_ESTATISTICAS);   
+            exit(-1);
+        }
+        else if (pedido.conteudo.dados.pedido_cliente.matricula == NULL || strcmp(pedido.conteudo.dados.pedido_cliente.matricula ,"") == 0){
+            error("SD8","Matrícula Inválida");
+            semNrDown(SEM_ESTATISTICAS);
+            dadosServidor->contadores.contadorAnomalias++;
+            semNrUp(SEM_ESTATISTICAS);
+            if(pidUpper == 1){
+                pedido.conteudo.action = 4;
+                pedido.tipoMensagem = pedido.conteudo.dados.pedido_cliente.pid_cliente;
+                status = msgsnd(msgId, &pedido, sizeof(pedido.conteudo), 0);
+                    if (status < 0){
+                        error("SD8","Erro ao enviar a mensagem");
+                    }
+            } 
+            exit(-1);
+        }
+        else if ( pedido.conteudo.dados.pedido_cliente.lanco == NULL || strcmp(pedido.conteudo.dados.pedido_cliente.lanco ,"") == 0 ){
+            error("SD8","Lanço Inválido");
+            semNrDown(SEM_ESTATISTICAS);
+            dadosServidor->contadores.contadorAnomalias++;
+            semNrUp(SEM_ESTATISTICAS); 
+                if(pidUpper == 1){
+                    pedido.conteudo.action = 4;
+                    pedido.tipoMensagem = pedido.conteudo.dados.pedido_cliente.pid_cliente;
+                    status = msgsnd(msgId, &pedido, sizeof(pedido.conteudo), 0);
+                        if (status < 0){
+                            error("SD8","Erro ao enviar a mensagem");
+                        }
+                }   
             exit(-1);
         }
         if ( pedido.conteudo.dados.pedido_cliente.tipo_passagem == 1){
@@ -444,28 +443,31 @@ int sd_reservaEntradaBD( DadosServidor* dadosServidor, Mensagem pedido ) {
                     indiceLista=i;
                     pedido.conteudo.dados.pedido_cliente.pid_servidor_dedicado= getpid();
                     dadosServidor->lista_passagens[i] = pedido.conteudo.dados.pedido_cliente;
-                    semNrDown(SEM_ESTATISTICAS);
+                    semNrUp(SEM_LISTAPASSAGENS);
                         if(pedido.conteudo.dados.pedido_cliente.tipo_passagem == 1){
+                            semNrDown(SEM_ESTATISTICAS);
                             dadosServidor->contadores.contadorNormal++;
+                            semNrUp(SEM_ESTATISTICAS);
                      }else{
+                            semNrDown(SEM_ESTATISTICAS);
                             dadosServidor->contadores.contadorViaVerde++;
+                            semNrUp(SEM_ESTATISTICAS);
                         }
-                    semNrUp(SEM_ESTATISTICAS);
                     success("SD9","Entrada %d preenchida",indiceLista);
                     return indiceLista;
                 }
             }
-        semNrUp(SEM_LISTAPASSAGENS);
+            semNrUp(SEM_LISTAPASSAGENS);
         error("SD9","Lista de Passagens cheia");
         semNrDown(SEM_ESTATISTICAS);
         dadosServidor->contadores.contadorAnomalias++;
+        semNrUp(SEM_ESTATISTICAS);
         pedido.conteudo.action = 4;
         pedido.tipoMensagem = pedido.conteudo.dados.pedido_cliente.pid_cliente;
         status = msgsnd( msgId, &pedido ,sizeof(pedido.conteudo.dados.pedido_cliente.pid_cliente),0);
             if(status < 0 ){
                 error("SD9","Erro ao enviar a mensagem");
             }
-        semNrUp(SEM_LISTAPASSAGENS);
         exit(-1);    
     debug("SD9 >");
     return indiceLista;
