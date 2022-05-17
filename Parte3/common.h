@@ -62,6 +62,20 @@ typedef struct {
 
 #define FILE_STATS "estatisticas.dat"       // Ficheiro que armazena as estatísticas necessárias para o programa
 
+#define ACTION_PEDIDO            1
+#define ACTION_PEDIDO_ACK        2
+#define ACTION_PEDIDO_CONCLUIDO  3
+#define ACTION_PEDIDO_CANCELADO  4
+
+#define TIPO_PASSAGEM_INVALIDO  -1
+#define TIPO_PASSAGEM_NORMAL     1
+#define TIPO_PASSAGEM_VIAVERDE   2
+
+#define SEM_ESTATISTICAS         0
+#define SEM_LISTAPASSAGENS       1
+
 /* OS ALUNOS NÃO DEVERÃO ACRESCENTAR NADA A ESTE FICHEIRO! */
 
 #endif
+
+

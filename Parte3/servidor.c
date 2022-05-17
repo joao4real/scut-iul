@@ -143,7 +143,7 @@ int shmCreateAndInit() {
          }else{
                  dadosServidor = shmat(shmId,0,0);
                     if(dadosServidor == NULL){
-                        error("S2.1","Erro ao criar a memória partilhada");
+                        error("S2.1","Erro ao abrir a memória partilhada");
                         exit(-1);
                  }else{
                         success("S2.1","Iniciei Shared Memory com ID %d", shmId);
@@ -174,7 +174,6 @@ int shmCreateAndInit() {
 int loadStats( Contadores* pStats ) {
     debug("S2.3 <");
         FILE* stats;
-        char str[40];
         stats = fopen(FILE_STATS , "rb");
                 if ( stats == NULL){
                     pStats->contadorNormal=0;
@@ -212,6 +211,15 @@ int createIPC() {
             signal(SIGCHLD, SIG_IGN);
             success("S3","Criei mecanismos IPC");
         }
+
+    // CRIAR O SEMÁFOROS
+
+    semId = semCreate(2);
+        if(semId < 0){
+            error("SD14","Erro ao criar o grupo de semáforos");
+        }
+    semNrSetValue(SEM_ESTATISTICAS ,1);
+    semNrSetValue(SEM_LISTAPASSAGENS, 1);
     debug("S3 >");
     return 0;
 }
@@ -282,28 +290,36 @@ void trataSinalSIGINT( int sinalRecebido ) {
     debug("S6 <");
         int status;
         success("S6","Shutdown Servidor");
+        //semNrDown(SEM_LISTAPASSAGENS);
         for (int i = 0; i < NUM_PASSAGENS; i++){
             if(dadosServidor->lista_passagens[i].tipo_passagem != -1){
                 kill( dadosServidor->lista_passagens[i].pid_servidor_dedicado,SIGHUP );
             }
         }
+        //semNrUp(SEM_LISTAPASSAGENS);
         success("S6.1","Shutdown Servidores Dedicados");
         FILE* est;
         est = fopen(FILE_STATS, "wb");
-            if(est == NULL || fwrite(&dadosServidor->contadores, sizeof(dadosServidor->contadores), 1, est) < 1){
-                error("S6.2","");
+            if(est == NULL ){
+                error("S6.2","Não foi possível abrir o ficheiro");
          }else{
-                success("S6.2","Estatísticas Guardadas");
-                fclose(est);
-            }
+              //semNrDown(SEM_ESTATISTICAS);
+                if (fwrite(&dadosServidor->contadores, sizeof(dadosServidor->contadores), 1, est) < 1){
+                    error("S6.2","Não foi possível  ler o ficheiro");
+             }else{
+                    success("S6.2","Estatísticas Guardadas");
+                    fclose(est);
+                }
+            //semNrUp(SEM_ESTATISTICAS);
+         }
         success("S6.3","Shutdown Servidor completo");
     status = msgctl(msgId ,IPC_RMID, NULL);
         if(status < 0){
             error("S6.3","Erro ao apagar a message queue");
             exit(-1);
         }
-    int result = semctl( IPC_KEY, 0, IPC_RMID, 0 );
-        if(result < 0){
+    int semId = semRemove();
+        if(semId < 0){
             error("S6.3","Erro ao apagar os semáforos criados");
             exit(-1);
         }
@@ -347,13 +363,16 @@ int sd_validaPedido( Mensagem pedido ) {
         int status;
         if ( pedido.conteudo.dados.pedido_cliente.pid_cliente <= 0){
             error("SD8","PID Inválido");
+            semNrDown(SEM_ESTATISTICAS);
             dadosServidor->contadores.contadorAnomalias++;
+            semNrUp(SEM_ESTATISTICAS); 
             exit(-1);
         }else{
             pidUpper = 1;
         }
         if ( pedido.conteudo.dados.pedido_cliente.tipo_passagem != 1 && pedido.conteudo.dados.pedido_cliente.tipo_passagem != 2 ){
             error("SD8","O tipo de passagem %d é inválido",pedido.conteudo.dados.pedido_cliente.tipo_passagem);
+            semNrDown(SEM_ESTATISTICAS);
             dadosServidor->contadores.contadorAnomalias++;
                 if(pidUpper == 1){
                     pedido.conteudo.action = 4;
@@ -363,10 +382,12 @@ int sd_validaPedido( Mensagem pedido ) {
                             error("SD8","Erro ao enviar a mensagem");
                         }
                 }
+            semNrUp(SEM_ESTATISTICAS); 
             exit(-1);
         }
         else if (pedido.conteudo.dados.pedido_cliente.matricula == NULL || strcmp(pedido.conteudo.dados.pedido_cliente.matricula ,"") == 0){
             error("SD8","Matrícula Inválida");
+            semNrDown(SEM_ESTATISTICAS);
             dadosServidor->contadores.contadorAnomalias++;
             if(pidUpper == 1){
                 pedido.conteudo.action = 4;
@@ -376,10 +397,12 @@ int sd_validaPedido( Mensagem pedido ) {
                         error("SD8","Erro ao enviar a mensagem");
                     }
             }
+            semNrUp(SEM_ESTATISTICAS); 
             exit(-1);
         }
         else if ( pedido.conteudo.dados.pedido_cliente.lanco == NULL || strcmp(pedido.conteudo.dados.pedido_cliente.lanco ,"") == 0 ){
             error("SD8","Lanço Inválido");
+            semNrDown(SEM_ESTATISTICAS);
             dadosServidor->contadores.contadorAnomalias++;
                 if(pidUpper == 1){
                     pedido.conteudo.action = 4;
@@ -388,7 +411,8 @@ int sd_validaPedido( Mensagem pedido ) {
                         if (status < 0){
                             error("SD8","Erro ao enviar a mensagem");
                         }
-                }    
+                } 
+            semNrUp(SEM_ESTATISTICAS);   
             exit(-1);
         }
         if ( pedido.conteudo.dados.pedido_cliente.tipo_passagem == 1){
@@ -414,21 +438,26 @@ int sd_reservaEntradaBD( DadosServidor* dadosServidor, Mensagem pedido ) {
     debug("SD9 <");
         int indiceLista = -1;
         int status;
+        semNrDown(SEM_LISTAPASSAGENS);
             for(int i=0; i < NUM_PASSAGENS;i++){
                 if (dadosServidor->lista_passagens[i].tipo_passagem == -1){
                     indiceLista=i;
                     pedido.conteudo.dados.pedido_cliente.pid_servidor_dedicado= getpid();
                     dadosServidor->lista_passagens[i] = pedido.conteudo.dados.pedido_cliente;
+                    semNrDown(SEM_ESTATISTICAS);
                         if(pedido.conteudo.dados.pedido_cliente.tipo_passagem == 1){
                             dadosServidor->contadores.contadorNormal++;
                      }else{
                             dadosServidor->contadores.contadorViaVerde++;
                         }
+                    semNrUp(SEM_ESTATISTICAS);
                     success("SD9","Entrada %d preenchida",indiceLista);
                     return indiceLista;
                 }
             }
+        semNrUp(SEM_LISTAPASSAGENS);
         error("SD9","Lista de Passagens cheia");
+        semNrDown(SEM_ESTATISTICAS);
         dadosServidor->contadores.contadorAnomalias++;
         pedido.conteudo.action = 4;
         pedido.tipoMensagem = pedido.conteudo.dados.pedido_cliente.pid_cliente;
@@ -436,7 +465,8 @@ int sd_reservaEntradaBD( DadosServidor* dadosServidor, Mensagem pedido ) {
             if(status < 0 ){
                 error("SD9","Erro ao enviar a mensagem");
             }
-        exit(-1);      
+        semNrUp(SEM_LISTAPASSAGENS);
+        exit(-1);    
     debug("SD9 >");
     return indiceLista;
 }
@@ -448,7 +478,9 @@ int sd_reservaEntradaBD( DadosServidor* dadosServidor, Mensagem pedido ) {
  */
 int apagaEntradaBD( DadosServidor* dadosServidor, int indice_lista ) {
     debug("<");
+        semNrDown(SEM_LISTAPASSAGENS);
         dadosServidor->lista_passagens[indice_lista].tipo_passagem = -1; 
+        semNrUp(SEM_LISTAPASSAGENS);
     debug(">");
     return 0;
 }
@@ -511,8 +543,8 @@ int sd_terminaProcessamento( Mensagem pedido ) {
             if (status < 0 ){
                 error("SD12","Erro ao enviar a mensagem");
             }
-                apagaEntradaBD(dadosServidor, indice_lista);
                 success("SD12","Fim Passagem %d %d", pedido.conteudo.dados.pedido_cliente.pid_cliente, pedido.conteudo.dados.pedido_cliente.pid_servidor_dedicado);
+                apagaEntradaBD(dadosServidor, indice_lista);
                 exit(0);
     debug("SD12 >");
     return 0;
@@ -525,8 +557,13 @@ int sd_terminaProcessamento( Mensagem pedido ) {
  */
 void sd_trataSinalSIGHUP(int sinalRecebido) {
     debug("SD13 <");
+    int status;
         mensagem.conteudo.action = 4;
         mensagem.tipoMensagem = mensagem.conteudo.dados.pedido_cliente.pid_cliente;
+        status = msgsnd(msgId , &mensagem , sizeof(mensagem.conteudo),0);
+            if(status < 0){
+                error("SD13","Erro ao enviar a mensagem");
+            }
         apagaEntradaBD(dadosServidor,indice_lista);
         success("SD13","Processamento Cancelado");
         exit(0);
@@ -543,195 +580,4 @@ void sd_trataSinalSIGHUP(int sinalRecebido) {
  // Este tópico não tem uma função associada, porque terá de ser implementada no resto do código.
 
 
-/******************************************************************************
- * FUNÇÕES UTILITÁRIAS FORNECIDAS PELOS VOSSOS QUERIDOS PROFESSORES DE SO...
- *****************************************************************************/
-
-/******************************************************************************
- * FUNÇÕES IPC SEMÁFOROS
- *****************************************************************************/
-
- /**
-  * @brief Função interna, não é para ser utilizada diretamente pelos alunos
-  */
- int __semGet( int nrSemaforos, int semFlags ) {
-    int id = semget( IPC_KEY, nrSemaforos, semFlags );
-    if ( id < 0 ) {
-        debug( "Não consegui criar/abrir o grupo de semáforos com key=0x%x", IPC_KEY );
-    } else {
-        debug( "Estou a usar o grupo de semáforos com key=0x%x e id=%d", IPC_KEY, id );
-    }
-    return id;
-}
-
-/**
- * @brief Cria um grupo de semáforos IPC associado a IPC_KEY com o número de semáforos passado
- * 
- * @param nrSemaforos número de semáforos deste grupo de semáforos
- * @return int em caso de sucesso, retorna o IPC_ID correspondente. Em caso de erro, retorna -1
- */
-int semCreate( int nrSemaforos ) {
-    return __semGet( nrSemaforos, IPC_CREAT | 0666 );
-}
-
-/**
- * @brief "Liga-se" a um grupo de semáforos IPC associado a IPC_KEY
- * 
- * @return int em caso de sucesso, retorna o IPC_ID correspondente. Em caso de erro, retorna -1
- */
-int semGet() {
-    return __semGet( 0, 0 );
-}
-
-/**
- * @brief Remove o grupo de semáforos IPC associado a IPC_KEY
- * 
- * @return int 0 if success, -1 if the semaphore group exists and could not be removed
- */
-int semRemove() {
-    int id = semGet();
-    // Ignore any errors here, as this is only to check if the semaphore group exists and remove it
-    if ( id > 0 ) {
-        // If the semaphore group with IPC_KEY already exists, remove it.
-        int result = semctl( id, 0, IPC_RMID, 0 );
-        if ( result < 0) {
-            debug( "Não consegui remover este grupo de semáforos" );
-        } else {
-            debug( "Removi este grupo de semáforos" );
-        }
-        return result;
-    }
-    return 0;
-}
-
-/**
- * @brief Define o valor do semáforo semNr do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @param semNr índice do semáforo a definir (começando em 0)
- * @param value valor a ser definido no semáforo semNr
- * @return int success
- */
-int semNrSetValue( int semNr, int value ) {
-    int id = semGet();
-    exit_on_error( id, "Erro semget" );
-    int result = semctl( id, semNr, SETVAL, value );
-    if ( result < 0) {
-        debug( "Não consegui definir o valor do semáforo %d deste grupo de semáforos", semNr );
-    } else {
-        debug( "O semáforo %d deste grupo de semáforos ficou com o valor %d", semNr, value );
-    }
-    return result;
-}
-
-/**
- * @brief Define o valor do semáforo 0 do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @param value valor a ser definido no semáforo 0
- * @return int success
- */
-int semSetValue( int value ) {
-    return semNrSetValue( 0, value );
-}
-
-/**
- * @brief Obtém o valor do semáforo semNr do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @param semNr índice do semáforo cujo valor queremos obter (começando em 0)
- * @return int valor do semáforo, ou -1 em caso de erro
- */
-int semNrGetValue( int semNr ) {
-    int id = semGet();
-    exit_on_error( id, "Erro semget" );
-    int result = semctl( id, semNr, GETVAL, 0 );
-    if ( result < 0 ) {
-        debug( "Não consegui obter o valor do semáforo %d deste grupo de semáforos", semNr );
-    } else {
-        debug( "O semáforo %d deste grupo de semáforos tem o valor %d", semNr, result );
-    }
-    return result;
-}
-
-/**
- * @brief Obtém o valor do semáforo 0 do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @return int valor do semáforo, ou -1 em caso de erro
- */
-int semGetValue() {
-    return semNrGetValue( 0 );
-}
-
-/**
- * @brief Adiciona um valor ao semáforo semNr do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @param semNr índice do semáforo a adicionar um valor (começando em 0)
- * @param addValue valor a ser adicionado no semáforo semNr
- * @return int success
- */
-int semNrAddValue( int semNr, int addValue ) {
-    int id = semGet();
-    exit_on_error( id, "Erro semget" );
-    int result = semctl( id, semNr, GETVAL, 0 );
-    exit_on_error( result, "Erro semctl" );
-    debug( "O semáforo %d deste grupo de semáforos tinha o valor %d", semNr, result );
-  
-    struct sembuf operation = { semNr, addValue, 0 };
-    result = semop( id, &operation, 1 );
-
-    if ( result < 0 ) {
-        debug( "Não consegui adicionar o valor %d ao semáforo %d deste grupo de semáforos", addValue, semNr );
-    } else {
-        result = semctl( id, semNr, GETVAL, 0 );
-        exit_on_error( result, "Erro semctl" );
-        debug( "O semáforo %d deste grupo de semáforos passou a ter o valor %d", semNr, result );
-    }
-    return result;
-}
-
-/**
- * @brief Adiciona um valor ao semáforo 0 do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @param addValue valor a ser adicionado no semáforo 0
- * @return int success
- */
-int semAddValue( int addValue ) {
-    return semNrAddValue( 0, addValue );
-}
-
-/**
- * @brief Adiciona 1 ao semáforo semNr do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @param semNr índice do semáforo cujo valor queremos obter (começando em 0)
- * @return int success
- */
-int semNrUp( int semNr ) {
-    return semNrAddValue( semNr, 1 );
-}
-
-/**
- * @brief Adiciona -1 ao semáforo semNr do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @param semNr índice do semáforo cujo valor queremos obter (começando em 0)
- * @return int success
- */
-int semNrDown( int semNr ) {
-    return semNrAddValue( semNr, -1 );
-}
-
-/**
- * @brief Adiciona 1 ao semáforo 0 do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @return int success
- */
-int semUp() {
-    return semAddValue( 1 );
-}
-
-/**
- * @brief Adiciona -1 ao semáforo 0 do grupo de semáforos IPC associado a IPC_KEY
- * 
- * @return int success
- */
-int semDown() {
-    return semAddValue( -1 );
-}
 
