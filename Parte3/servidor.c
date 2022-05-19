@@ -444,15 +444,13 @@ int sd_reservaEntradaBD( DadosServidor* dadosServidor, Mensagem pedido ) {
                     pedido.conteudo.dados.pedido_cliente.pid_servidor_dedicado= getpid();
                     dadosServidor->lista_passagens[i] = pedido.conteudo.dados.pedido_cliente;
                     semNrUp(SEM_LISTAPASSAGENS);
+                    semNrDown(SEM_ESTATISTICAS);
                         if(pedido.conteudo.dados.pedido_cliente.tipo_passagem == 1){
-                            semNrDown(SEM_ESTATISTICAS);
                             dadosServidor->contadores.contadorNormal++;
-                            semNrUp(SEM_ESTATISTICAS);
                      }else{
-                            semNrDown(SEM_ESTATISTICAS);
                             dadosServidor->contadores.contadorViaVerde++;
-                            semNrUp(SEM_ESTATISTICAS);
                         }
+                    semNrUp(SEM_ESTATISTICAS);
                     success("SD9","Entrada %d preenchida",indiceLista);
                     return indiceLista;
                 }
