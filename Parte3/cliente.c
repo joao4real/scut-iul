@@ -105,14 +105,26 @@ Passagem getDadosPedidoUtilizador() {
     }else{
         p.tipo_passagem = atoi(passagem);
     }
+    if (  p.tipo_passagem != 1 &&  p.tipo_passagem != 2){
+        error("C2","Tipo de passagem inválido");
+        exit(-1);
+    }
     printf("Inserir matrícula: ");      
     if(my_fgets(p.matricula, 9, stdin) == NULL){
             error("C2","Campo Vazio");
             exit(-1);
         }
+    if (p.matricula == NULL || strcmp(p.matricula ,"") == 0){
+        error("C2","Matrícula Inválida");
+        exit(-1);
+    }
     printf("Inserir Lanço: ");
     if(my_fgets(p.lanco, 50, stdin) == NULL){
         error("C2","Campo Vazio");
+        exit(-1);
+    }
+     if (p.lanco == NULL || strcmp(p.lanco ,"") == 0){
+        error("C2","Lanço Inválido");
         exit(-1);
     }
     if(p.tipo_passagem == 1){
